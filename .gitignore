@@ -1,0 +1,11 @@
+node_modules
+# Build output. Never committed: it inlines the Firebase web config (AIza...), which GitHub
+# push protection flags, and Netlify rebuilds it from source on every deploy anyway.
+dist
+.env
+.env.local
+.env.production
+.env.development
+.DS_Store
+.vercel
+.netlify

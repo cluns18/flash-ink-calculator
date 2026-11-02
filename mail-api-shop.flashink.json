@@ -1,0 +1,32 @@
+{
+  "_comment": "Flash Ink (Bend, OR), owner Dan Wellisch. DRAFT for obg-mail-api shops/flashink.json, written 2026-11-02 alongside ~/Projects/flash-ink-calculator (shop_id 'flashink'), the replacement for ConvertCalculator qj5JhGhtgNscdh4ei. ROUTING matches what ConvertCalculator's submit action does today: sendToEmails [olivebranchgrowth@gmail.com, info@flashink.com], replyTo info@flashink.com. So the lead goes To info@flashink.com with OBG on Cc (shop_owner_email, the same convention as tzers, print-master, lvr-ink), and the customer's copy has Reply-To info@flashink.com. One difference from ConvertCalculator: send_quote sets the SHOP email's Reply-To to the customer, so Dan's reply goes straight to them. The service has no Bcc field, which is why OBG rides as the Cc. ADDRESS: city only, flashink.com lists no street address.",
+
+  "shop_name": "Flash Ink",
+  "owner_name": "Dan",
+  "shop_email": "info@flashink.com",
+  "shop_owner_email": "olivebranchgrowth@gmail.com",
+  "shop_phone": "(541) 323-5274",
+  "shop_address": "Bend, OR",
+  "theme": "light",
+
+  "accent_color": "#2E5B6B",
+  "accent_deep": "#234551",
+  "clay_color": "#3A7286",
+  "button_ink": "#FFFFFF",
+  "eyebrow_color": "#2E5B6B",
+
+  "bg_color": "#EDF3F6",
+  "card_color": "#FFFFFF",
+  "panel_color": "#F8FAFB",
+  "border_color": "#C1D8E0",
+  "ink_color": "#0E1B20",
+  "muted_color": "#2C2E2F",
+  "soft_color": "#2C2E2F",
+
+  "logo_url": "https://cdn.prod.website-files.com/671c0ac4c0e15f9bf3d47565/678969cd7285d164e24a49ec_webclip.png",
+
+  "intro_copy": "Thanks for putting your project together. Here is everything you picked, plus your pricing. This is the local pickup price, so reply here if you need it delivered.",
+  "followup_copy": "We will send you mockups and a final proof to approve before anything goes to press. Price may vary slightly on final approval. Call us any time at (541) 323-5274.",
+
+  "_brand_note": "Every colour is a custom property in flashink.com's Webflow stylesheet (flashink-2024.shared.*.css), read 2026-11-02: accent #2E5B6B = --button--button-bg-color (base-70, the site's CTA), accent_deep #234551 = base-80, clay #3A7286 = button hover (base-60), ink #0E1B20 = base-100, muted/soft #2C2E2F = neutral-100 (not the site's #494D4F body grey), panel #F8FAFB = neutral-10, bg #EDF3F6 = neutral-30, border #C1D8E0 = base-20. White on #2E5B6B measures 7.3:1, on #234551 9.9:1. logo_url is the site's own apple-touch webclip (white mark on navy, 256px), because Gmail will not render the SVG wordmark."
+}

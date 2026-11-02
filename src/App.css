@@ -1,0 +1,1056 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   FLASH INK - BRAND TOKENS
+   Source of truth: the live Webflow site, www.flashink.com, read 2026-11-02 from
+   its shared stylesheet (flashink-2024.shared.*.css) custom properties.
+     --fi-teal       #2e5b6b  --button--button-bg-color (base-70), every CTA on the site
+     --fi-teal-hover #3a7286  --button--button-bg-color-hover (base-60)
+     --fi-teal-deep  #234551  base-80
+     --fi-navy       #0e1b20  base-100, the dark header and dark scheme ground
+     --fi-ink        #2c2e2f  neutral-100, heading colour on the light scheme
+     --fi-paper      #f8fafb  neutral-10, the light scheme ground
+     --fi-mist       #edf3f6  neutral-30
+     --fi-sky        #dae7ec  base-10
+   Fonts: the site sets headings in franklin-gothic-atf (Adobe Typekit kit
+   ihx7por, which is locked to flashink.com and will not load from this host)
+   and body in Satoshi Variable (self-hosted on their Webflow CDN, a free
+   Fontshare face, copied to /fonts). Headings fall back to Libre Franklin, the
+   open-source Franklin Gothic revival, so the shape stays close.
+   No grey text anywhere: body copy is ink, not neutral-90.
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Satoshi Variable';
+  src: url('/fonts/Satoshi-Variable.ttf') format('truetype');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --fi-navy: #0e1b20;
+  --fi-ink: #2c2e2f;
+  --fi-paper: #f8fafb;
+  --fi-mist: #edf3f6;
+  --fi-sky: #dae7ec;
+  --fi-white: #ffffff;
+
+  --fi-teal: #2e5b6b;
+  --fi-teal-hover: #3a7286;
+  --fi-teal-deep: #234551;
+  --fi-teal-line: #649db1;
+
+  /* Error state. Distinct from teal so a failure never reads as an accent.
+     #b42318 on white measures 6.5:1. */
+  --fi-error: #b42318;
+
+  --fi-font-display: 'franklin-gothic-atf', 'Libre Franklin', ui-sans-serif, system-ui, sans-serif;
+  --fi-font-body: 'Satoshi Variable', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ── Consistent slide layout system ── */
+.slide-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 24px 16px;
+  background: var(--fi-mist);
+}
+
+/* Embedded in a client page, the frame IS the viewport, so 100vh units measure
+   whatever height the parent already set rather than the content. Dropping them
+   lets utils/embedHeight.js report the card's real height so the parent can
+   match it. The outer padding goes too, because the page's own shell already
+   pads and rounds the frame. */
+.is-embedded .slide-container {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.is-embedded .slide-page {
+  max-height: none;
+}
+
+.slide-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 672px;
+  height: auto;
+  min-height: 460px;
+  max-height: calc(100vh - 48px);
+  background-color: var(--fi-white);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(14, 27, 32, 0.10);
+  box-shadow: 0 10px 30px rgba(14, 27, 32, 0.08);
+}
+
+.slide-header {
+  flex-shrink: 0;
+  padding: 24px 24px 12px;
+  text-align: center;
+}
+
+.slide-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 24px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.slide-content > * {
+  width: 100%;
+}
+
+.slide-content.final-quote-content {
+  justify-content: flex-start;
+}
+
+.slide-nav {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(14, 27, 32, 0.08);
+}
+
+.slide-nav.nav-end {
+  justify-content: flex-end;
+}
+
+.slide-content img.garment-img {
+  max-width: 200px;
+  max-height: 200px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.slide-page * {
+  box-sizing: border-box;
+}
+
+/* ── Typography ── */
+.headingColor {
+    color: var(--fi-navy);
+    font-family: var(--fi-font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+}
+
+.bodyColor {
+    color: var(--fi-ink);
+    font-family: var(--fi-font-body);
+}
+
+.bgColor {
+    background-color: var(--fi-white);
+}
+
+/* ── Buttons ── */
+.btnColor {
+    background-color: var(--fi-teal);
+    /* White on #2e5b6b measures 7.3:1, the site's own CTA pairing. */
+    color: #ffffff;
+    font-family: var(--fi-font-body);
+    border: solid 2px var(--fi-teal);
+    font-weight: 600;
+}
+
+.btnColor:hover {
+    background-color: var(--fi-teal-hover);
+    border-color: var(--fi-teal-hover);
+}
+
+.btnInactive {
+    /* Full-strength navy label on paper with a visible hairline, so an
+       unselected option reads as choosable rather than disabled. */
+    background-color: var(--fi-paper);
+    color: var(--fi-navy);
+    font-family: var(--fi-font-body);
+    border: solid 2px rgba(14, 27, 32, 0.22);
+    font-weight: 600;
+    position: relative;
+    overflow: hidden;
+    transition: color 0.3s ease, border-color 0.3s ease;
+    z-index: 0;
+}
+
+.btnInactive::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 100%;
+    background-color: var(--fi-teal);
+    transition: width 0.25s linear;
+    z-index: -1;
+}
+
+.btnInactive:hover::before {
+    width: 100%;
+}
+
+.btnInactive:hover {
+    /* The teal fill sweeps in on hover, so the label turns white (7.3:1). */
+    color: #ffffff;
+    border-color: var(--fi-teal);
+}
+
+/* ── Inputs ── */
+.slide-page input,
+.slide-page select,
+.slide-page textarea {
+    background: var(--fi-white) !important;
+    border-color: rgba(14, 27, 32, 0.28) !important;
+    color: var(--fi-navy) !important;
+}
+
+.slide-page input::placeholder,
+.slide-page textarea::placeholder {
+    /* Placeholder stays dark enough to read (#45535a on white is 7.9:1). */
+    color: #45535a !important;
+}
+
+.slide-page input:focus,
+.slide-page select:focus,
+.slide-page textarea:focus {
+    border-color: var(--fi-teal) !important;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(46, 91, 107, 0.3);
+}
+
+.light-card input,
+.light-card select,
+.light-card textarea {
+    background: #fff !important;
+    border-color: rgba(14, 27, 32, 0.2) !important;
+    color: var(--fi-navy) !important;
+}
+
+.light-card input::placeholder,
+.light-card textarea::placeholder {
+    color: #45535a !important;
+}
+
+.light-card input:focus,
+.light-card select:focus,
+.light-card textarea:focus {
+    border-color: var(--fi-teal) !important;
+    box-shadow: 0 0 0 2px rgba(46, 91, 107, 0.2);
+}
+
+/* ── Scrollbar ── */
+.slide-content::-webkit-scrollbar { width: 4px; }
+.slide-content::-webkit-scrollbar-track { background: transparent; }
+.slide-content::-webkit-scrollbar-thumb { background: rgba(14, 27, 32, 0.12); border-radius: 4px; }
+
+.error-shake {
+    border: 3px solid var(--fi-teal) !important;
+    animation: shake 0.3s ease-in-out 2;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 80% { transform: translateX(-10px); }
+    40%, 60% { transform: translateX(10px); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.error-message {
+    color: var(--fi-error);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 10px;
+    font-family: var(--fi-font-body);
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .slide-container { padding: 8px; }
+    .slide-page { height: calc(100vh - 16px); max-height: 600px; border-radius: 10px; }
+    .slide-header { padding: 12px 16px 6px; }
+    .slide-header h1 { font-size: 1.25rem; }
+    .slide-header p { font-size: 0.8rem; }
+    .slide-content { padding: 0 12px; }
+    .slide-nav { padding: 10px 12px; }
+    .slide-content img.garment-img { max-width: 140px; max-height: 140px; }
+    h2 { font-size: 0.9rem; }
+    .bodyColor { font-size: 0.85rem; }
+    .btnColor, .btnInactive { font-size: 0.8rem; padding: 7px 12px; }
+
+    /* Shrink intro logo on mobile */
+    .intro-logo { width: 105px !important; margin-bottom: 8px !important; }
+
+    /* Garment select: image on top, grid below on mobile */
+    .garment-layout {
+      flex-direction: column !important;
+      gap: 0 !important;
+      flex: 1;
+    }
+    .garment-layout .garment-preview {
+      width: 100% !important;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .garment-layout .garment-preview img {
+      max-width: 200px !important;
+      max-height: 200px !important;
+      width: auto !important;
+      height: auto !important;
+      object-fit: contain !important;
+    }
+    .garment-layout .garment-buttons {
+      width: 100% !important;
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 4px !important;
+      flex-shrink: 0;
+      padding-top: 8px;
+    }
+    .garment-layout .garment-buttons button {
+      padding: 6px 6px !important;
+      font-size: 0.68rem !important;
+      line-height: 1.2 !important;
+    }
+
+}
+
+/* Hide native number input spinner arrows (they're ugly on hover) */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+@media (max-width: 480px) {
+    .slide-page { border-radius: 0; border: none; height: 100vh; max-height: none; }
+    .slide-container { padding: 0; }
+    .slide-header { padding: 10px 14px 4px; }
+    .slide-header h1 { font-size: 1.15rem; }
+    .slide-content { padding: 0 10px; }
+    .slide-nav { padding: 8px 10px; }
+    .btnColor, .btnInactive { font-size: 0.78rem; padding: 6px 10px; }
+}
+
+/* ── Full S&S catalog browser (GarmentModelSelect) ── */
+.catalog-search {
+    width: 100%;
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border: 2px solid rgba(14, 27, 32, 0.12);
+    border-radius: 8px;
+    font-family: var(--fi-font-body);
+    font-size: 0.82rem;
+    outline: none;
+}
+
+.catalog-search:focus {
+    border-color: var(--fi-teal) !important;
+}
+
+.catalog-msg {
+    font-size: 0.78rem;
+    text-align: center;
+    padding: 12px;
+}
+
+/* All four signs always render. The unearned ones stay visible but dim, so the
+   band reads as a scale ($$ of 4) rather than as an unlabelled count. */
+.price-tier {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    margin-top: 3px;
+    line-height: 1;
+}
+
+.price-tier-on {
+    color: var(--fi-teal-hover);
+}
+
+.price-tier-off {
+    /* The unearned signs of the 4-step scale. base-50 off the site palette,
+       3.1:1 on white: a dim graphic, the meaning is in the aria-label. */
+    color: var(--fi-teal-line);
+}
+
+.catalog-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    flex-shrink: 0;
+    padding: 2px 0 4px;
+    font-family: var(--fi-font-body);
+    font-size: 0.72rem;
+}
+
+.catalog-pager button {
+    background: transparent;
+    border: 2px solid rgba(14, 27, 32, 0.12);
+    border-radius: 6px;
+    color: var(--fi-navy);
+    padding: 3px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.catalog-pager button:hover:not(:disabled) {
+    border-color: var(--fi-teal);
+}
+
+.catalog-pager button:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.catalog-open {
+    background: transparent;
+    border: 2px dashed rgba(14, 27, 32, 0.18);
+    border-radius: 8px;
+    color: var(--fi-ink);
+    font-family: var(--fi-font-body);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 7px 10px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.catalog-open:hover {
+    border-color: var(--fi-teal);
+    color: var(--fi-navy);
+}
+
+/* ==========================================================================
+   Garment step, design-studio style (2026-09-29).
+   Three featured cards per type with a badge, a tall photo, a headline and
+   three spec-sheet reasons, matching src/app/order/garment/page.tsx in the
+   Olive Branch Apparel Design Studio. Same card shape carries the rest of the
+   sheet and the catalog grid so nothing on the step reads as a text list.
+   Every colour is a Flash Ink token; secondary text is --fi-ink on white
+   (13:1), never a mid grey.
+   ========================================================================== */
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.pick-content {
+    justify-content: flex-start;
+    gap: 12px;
+    padding-top: 12px;
+}
+
+.pick-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    width: 100%;
+    align-items: stretch;
+    padding: 12px 2px 2px;
+}
+
+.pick-grid--picked {
+    grid-template-columns: minmax(0, 1fr);
+    padding-bottom: 0;
+}
+
+.pick-grid--more,
+.pick-grid--catalog {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.pick-grid--catalog {
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.pick-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-width: 0;
+    background: var(--fi-white);
+    border: 2px solid rgba(14, 27, 32, 0.14);
+    border-radius: 16px;
+    padding: 18px 14px 14px;
+    cursor: pointer;
+    font-family: var(--fi-font-body);
+    color: var(--fi-navy);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.pick-card:hover {
+    border-color: var(--fi-teal-line);
+    box-shadow: 0 8px 22px rgba(14, 27, 32, 0.12);
+}
+
+.pick-card.is-active {
+    border-color: var(--fi-teal);
+    box-shadow: 0 0 0 3px rgba(46, 91, 107, 0.35), 0 8px 22px rgba(14, 27, 32, 0.12);
+    transform: scale(1.02);
+}
+
+.pick-card--compact {
+    padding: 12px 10px 10px;
+    border-radius: 12px;
+}
+
+.pick-badge {
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    background: var(--fi-teal);
+    color: #ffffff;
+    font-family: var(--fi-font-body);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 4px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--fi-teal-hover);
+}
+
+.pick-selected {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--fi-teal);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pick-selected .pick-check {
+    width: 12px;
+    height: 12px;
+}
+
+.pick-card-img {
+    width: 100%;
+    height: 170px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(14, 27, 32, 0.06);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.pick-card--compact .pick-card-img {
+    height: 110px;
+}
+
+.pick-card-img img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.pick-card-noimg {
+    font-size: 0.7rem;
+    color: var(--fi-ink);
+}
+
+.pick-card-brand {
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fi-ink);
+}
+
+.pick-card-style {
+    font-family: var(--fi-font-display);
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-top: 2px;
+    color: var(--fi-navy);
+}
+
+.pick-card--compact .pick-card-style {
+    font-size: 0.9rem;
+}
+
+.pick-card-title {
+    font-size: 0.74rem;
+    line-height: 1.25;
+    margin-top: 3px;
+    color: var(--fi-ink);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.pick-card-head {
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1.25;
+    margin-top: 8px;
+    color: var(--fi-teal-hover);
+}
+
+.pick-card--compact .pick-card-head {
+    font-size: 0.74rem;
+    margin-top: 5px;
+}
+
+.pick-card-bullets {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 0;
+    text-align: left;
+    display: grid;
+    gap: 6px;
+    width: 100%;
+}
+
+.pick-card-bullets li {
+    display: flex;
+    gap: 7px;
+    align-items: flex-start;
+    font-size: 0.76rem;
+    line-height: 1.35;
+    color: var(--fi-ink);
+}
+
+.pick-card-bullets .pick-check {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    margin-top: 3px;
+    color: var(--fi-teal-hover);
+}
+
+.pick-card-foot {
+    margin-top: auto;
+    padding-top: 10px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.pick-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+}
+
+.pick-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid rgba(14, 27, 32, 0.35);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.pick-swatch-more {
+    font-size: 0.68rem;
+    font-weight: 700;
+    margin-left: 2px;
+    color: var(--fi-ink);
+}
+
+.pick-card-count {
+    font-size: 0.68rem;
+    color: var(--fi-ink);
+}
+
+.pick-card .price-tier {
+    margin-top: 2px;
+}
+
+.pick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+    width: 100%;
+    padding-bottom: 4px;
+}
+
+.pick-actions .catalog-open {
+    flex: 1 1 auto;
+    color: var(--fi-ink);
+}
+
+@media (max-width: 900px) {
+    .pick-grid--more,
+    .pick-grid--catalog {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .pick-content {
+        overflow-y: auto;
+    }
+
+    .pick-grid,
+    .pick-grid--more,
+    .pick-grid--catalog {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .pick-grid--catalog {
+        overflow: visible;
+        flex: 0 0 auto;
+    }
+
+    .pick-card-img {
+        height: 120px;
+    }
+
+    .pick-card--compact .pick-card-img {
+        height: 96px;
+    }
+
+    .pick-actions {
+        flex-direction: column;
+    }
+}
+
+/* ── Print location tabs (pages/PrintLocations.jsx) ── */
+.loc-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.loc-tab {
+    padding: 8px 20px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+/* A location that is not on the quote yet. Dashed so it reads as "add", with the
+   label at full strength so it never reads as disabled. */
+.loc-tab-add {
+    background: transparent;
+    color: var(--fi-navy);
+    border: 2px dashed rgba(14, 27, 32, 0.5);
+    font-family: var(--fi-font-body);
+    font-weight: 600;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.loc-tab-add:hover {
+    background: var(--fi-teal-deep);
+    border-color: var(--fi-teal-hover);
+    color: #ffffff;
+}
+
+.loc-panel {
+    padding: 16px;
+    border-radius: 10px;
+    background: var(--fi-paper);
+    border: 1px solid rgba(14, 27, 32, 0.08);
+}
+
+.loc-chip {
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+
+.loc-file {
+    display: inline-block;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.loc-file:focus-within {
+    border-color: var(--fi-teal-hover);
+    box-shadow: 0 0 0 2px rgba(46, 91, 107, 0.3);
+}
+
+.loc-stepper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.loc-step {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.loc-step:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.loc-step:disabled::before {
+    display: none;
+}
+
+.loc-count {
+    min-width: 28px;
+    text-align: center;
+    font-size: 1.75rem;
+}
+
+.loc-remove {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--fi-ink);
+    font-family: var(--fi-font-body);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.loc-remove:hover {
+    color: var(--fi-teal);
+}
+
+
+/* ── Final step (pages/FinalQuote.jsx) ── */
+.size-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.size-cell {
+    text-align: center;
+    background: var(--fi-paper);
+    border: 2px solid rgba(14, 27, 32, 0.14);
+    border-radius: 8px;
+    padding: 6px 3px;
+    transition: border-color 0.2s ease;
+}
+
+.size-cell.is-active {
+    border-color: var(--fi-teal);
+    background: var(--fi-white);
+}
+
+.size-label {
+    display: block;
+    font-family: var(--fi-font-body);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--fi-navy);
+    margin-bottom: 4px;
+}
+
+.size-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.size-btn {
+    width: 22px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid rgba(14, 27, 32, 0.28);
+    background: var(--fi-white);
+    color: var(--fi-navy);
+    font-weight: 700;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+}
+
+.size-btn:hover {
+    background: var(--fi-teal);
+    border-color: var(--fi-teal);
+    color: #ffffff;
+}
+
+.size-input {
+    width: 38px;
+    height: 24px;
+    text-align: center;
+    border: 1px solid rgba(14, 27, 32, 0.28);
+    border-radius: 4px;
+    font-family: var(--fi-font-body);
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0 2px;
+}
+
+.price-card {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--fi-sky);
+    border: 1px solid rgba(46, 91, 107, 0.35);
+    text-align: center;
+}
+
+.price-row {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px 28px;
+}
+
+.price-label {
+    font-family: var(--fi-font-body);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fi-ink);
+}
+
+.price-value {
+    font-family: var(--fi-font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--fi-navy);
+    font-variant-numeric: tabular-nums;
+}
+
+.price-total {
+    color: var(--fi-teal-deep);
+}
+
+.price-note {
+    margin-top: 6px;
+    font-family: var(--fi-font-body);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: var(--fi-ink);
+}
+
+.price-note a,
+.send-failed a {
+    color: var(--fi-teal-deep);
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 10px;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-family: var(--fi-font-body);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--fi-navy);
+    text-align: left;
+}
+
+.form-field input {
+    border: 1px solid rgba(14, 27, 32, 0.28);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    font-weight: 400;
+    font-family: var(--fi-font-body);
+}
+
+.form-field--wide {
+    grid-column: 1 / -1;
+}
+
+.field-error {
+    color: var(--fi-error);
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.send-failed {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #fde8e8;
+    border: 1px solid #f5b5b5;
+    color: #7a1b12;
+    font-family: var(--fi-font-body);
+    font-size: 0.8rem;
+    line-height: 1.45;
+    text-align: center;
+}
+
+.submit-btn {
+    padding: 11px 26px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+/* Disabled reads as "not yet": navy label on mist, never white on a faded teal. */
+.submit-btn:disabled,
+.submit-btn:disabled:hover {
+    background: var(--fi-mist);
+    border-color: rgba(14, 27, 32, 0.28);
+    color: var(--fi-navy);
+    cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+    .size-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+    .form-grid { grid-template-columns: 1fr; }
+    .price-value { font-size: 1.25rem; }
+}

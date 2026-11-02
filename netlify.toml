@@ -1,0 +1,6 @@
+# Static front end only. Pricing runs in the browser (src/pricing/flashInk.js, no secrets)
+# and quotes post to obg-mail-api on OBG's Vercel, so this site has no functions and no
+# server-side secrets. Only the VITE_FIREBASE_* and VITE_SUPABASE_* web keys belong in its env.
+[build]
+  command = "npm run build"
+  publish = "dist"
