@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import NavBtn from '../components/NavBtn';
 import calculateFinalQuote from '../utils/functions';
-import { MIN_QTY, PRINTS_PER_PLACEMENT } from '../pricing/flashInk';
-import { sendQuote, clean, escName, artworkStatus } from '../utils/quoteDelivery';
+import { MIN_QTY } from '../pricing/flashInk';
+import { sendQuote } from '../utils/quoteDelivery';
+import { GARMENT_SIZES, garmentLabelFor, describeJob, buildQuotePayload } from '../utils/quotePayload';
 import { trackEvent } from '../utils/analytics';
 import SHOP_CONFIG, { telHref } from '../config/shop';
 
@@ -16,11 +17,7 @@ import SHOP_CONFIG, { telHref } from '../config/shop';
 // Never lose the quote: a withheld price still submits ("we will price it by hand"), and a
 // failed send keeps everything on screen with the phone, the email and a prefilled mail link.
 
-const GARMENT_SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
 const MAX_PER_SIZE = 10000;
-
-// Free text lands in the shop's HTML email unescaped, so angle brackets go too.
-const text = (s, max) => escName(clean(s, max));
 
 const money = (n) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -46,8 +43,7 @@ export default function FinalQuote({
     const byHand = !belowMin && !quote.ok && (quote.code === 'NO_PRICE_CELL' || quote.code === 'SCREENS_EXCEEDED');
 
     const dark = selectedColor ? selectedColor.underbase !== 0 : true;
-    const baseLabel = selectedModel || selectedGarmentType?.name || '';
-    const garmentLabel = selectedGarment?.fromCatalog && selectedGarment.title ? `${baseLabel} · ${selectedGarment.title}` : baseLabel;
+    const garmentLabel = garmentLabelFor({ selectedModel, selectedGarmentType, selectedGarment });
 
     const setSize = (size, raw) => {
         const digits = raw.replace(/[^0-9]/g, '').slice(0, 5);
@@ -78,68 +74,11 @@ export default function FinalQuote({
     const change = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
     const blur = (e) => setTouched((t) => ({ ...t, [e.target.name]: true }));
 
-    const sizeLine = GARMENT_SIZES.filter((s) => counts[s] > 0).map((s) => `${s} x ${counts[s]}`).join(' · ');
-    const inkLine = (printLocations || [])
-        .map((l) => {
-            const both = (PRINTS_PER_PLACEMENT[l.name] || 1) > 1 ? ', both sleeves' : '';
-            return `${l.name}: ${l.colors} color${l.colors === 1 ? '' : 's'}${dark ? ' + white base' : ''}${both}`;
-        })
-        .join(', ');
-    const priceText = quote.ok ? quote.pricePerItem.toFixed(2) : 'Priced by hand';
-    const totalText = quote.ok ? quote.totalQuote.toFixed(2) : 'Priced by hand';
+    const { sizeLine, inkLine, priceText, totalText } = describeJob({ counts, printLocations, dark, quote });
 
-    const buildPayload = () => {
-        const locs = printLocations || [];
-        const uploaded = locs.find((l) => l.artwork && !l.artwork.startsWith('pending:'));
-        const pending = locs.find((l) => l.artwork && l.artwork.startsWith('pending:'));
-        // One file rides as a real attachment (quoteDelivery attaches one). Every location's
-        // file and notes also go in the notes line, so a second location's art is never lost.
-        const notes = locs
-            .map((l) => {
-                const bits = [];
-                if (l.description.trim()) bits.push(text(l.description, 1500));
-                if (l.artwork && !l.artwork.startsWith('pending:')) bits.push(`file: ${l.artwork}`);
-                else if (l.artwork) bits.push(`upload incomplete: ${text(l.fileName, 200)}`);
-                return bits.length ? `${l.name}: ${bits.join(', ')}` : null;
-            })
-            .filter(Boolean);
-        const address = text(form.address, 300);
-        if (address) notes.push(`Delivery address: ${address}`);
-        if (byHand) notes.push(`No instant price: ${quote.message}`);
-
-        return {
-            payload: {
-                shop_id: SHOP_CONFIG.shop_id,
-                customer: {
-                    name: escName(clean(form.name, 120)),
-                    email: clean(form.email, 200),
-                    company: text(form.company, 200) || 'N/A',
-                    phone: clean(form.phone, 40),
-                },
-                quote: {
-                    project: 'Screen Printing',
-                    garment_name: text(garmentLabel, 200),
-                    color: text(selectedColor?.name || '', 80),
-                    locations: locs.map((l) => l.name).join(', ') || 'None',
-                    ink_details: inkLine || 'Standard',
-                    special_inks: dark ? 'White underbase (dark garment)' : 'None',
-                    size_breakdown: sizeLine || 'N/A',
-                    quantity,
-                    price_per_item: priceText,
-                    total_price: totalText,
-                    artwork_status: artworkStatus({
-                        artworkUrl: uploaded?.artwork || null,
-                        pendingFilename: !uploaded && pending ? pending.fileName : null,
-                    }),
-                    artwork_description: clean(notes.join(' | '), 4000) || 'No description provided',
-                    // Not rendered by the current templates; carried so a template can add it.
-                    delivery_address: address || '',
-                },
-            },
-            file: uploaded?.file || null,
-            artworkUrl: uploaded?.artwork || null,
-        };
-    };
+    // Built by the pure module so scripts/lead-contract-test.mjs sends the exact same body.
+    const buildPayload = () =>
+        buildQuotePayload({ form, garmentLabel, selectedColor, printLocations, dark, quantity, counts, quote, byHand });
 
     const submit = async () => {
         setTouched({ name: true, email: true, phone: true });

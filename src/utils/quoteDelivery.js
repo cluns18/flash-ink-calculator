@@ -61,13 +61,13 @@ export const artworkStatus = ({ artworkUrl, pendingFilename }) => {
   return 'No file uploaded';
 };
 
-const post = async (endpoint, body) => {
+const post = async (endpoint, body, extraHeaders) => {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
   try {
     const res = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...extraHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       signal: ctrl.signal,
     });
@@ -92,8 +92,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * @param {File?}   file      the raw artwork File, when the customer picked one
  * @param {string?} artworkUrl the Firebase URL, only set if the upload succeeded
  * @param {string?} endpoint  override, defaults to the live service
+ * @param {object?} headers   extra request headers. The app never passes this; the lead
+ *                            contract test uses it for obg-mail-api's X-OBG-Canary header.
  */
-export const sendQuote = async (payload, { file, artworkUrl, endpoint } = {}) => {
+export const sendQuote = async (payload, { file, artworkUrl, endpoint, headers } = {}) => {
   const url =
     endpoint ||
     import.meta.env.VITE_QUOTE_ENDPOINT ||
@@ -132,7 +134,7 @@ export const sendQuote = async (payload, { file, artworkUrl, endpoint } = {}) =>
   for (const body of attempts) {
     for (let i = 0; i <= RETRIES; i++) {
       try {
-        return await post(url, body);
+        return await post(url, body, headers);
       } catch (err) {
         lastErr = err;
         // Any 4xx is deterministic for THIS body: a 413 will be too big every

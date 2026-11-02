@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:price": "node scripts/price-check.mjs"
+    "test:price": "node scripts/price-check.mjs",
+    "test:lead": "node scripts/lead-contract-test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.2",
