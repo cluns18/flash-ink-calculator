@@ -40,13 +40,12 @@ export const newLocation = (name) => ({
 
 export const hasArtwork = (loc) => Boolean(loc.artwork || loc.description.trim());
 
-export default function PrintLocations({ onNext, onPrevious, selectedGarmentType, selectedColor, printLocations, setPrintLocations }) {
+export default function PrintLocations({ onNext, onPrevious, selectedGarmentType, printLocations, setPrintLocations }) {
     const placements = PLACEMENTS[selectedGarmentType?.id] || [];
-    // A dark garment spends one screen per location on the white underbase, so the most ink
-    // colours one spot can carry is the matrix width less that screen. A colour with no
-    // flag is treated as dark, matching the price engine.
-    const dark = selectedColor ? selectedColor.underbase !== 0 : true;
-    const maxColors = MAX_SCREENS - (dark ? 1 : 0);
+    // The matrix is 8 wide on the job's total colours (IMP), so 8 is also the most one spot
+    // can carry. Past 8 across all spots the quote step offers a hand price. Garment colour
+    // does not change pricing (ConvertCalculator parity, 2026-11-02).
+    const maxColors = MAX_SCREENS;
 
     const [activeId, setActiveId] = useState(printLocations[0]?.id ?? null);
     const [showHint, setShowHint] = useState(false);
@@ -65,8 +64,7 @@ export default function PrintLocations({ onNext, onPrevious, selectedGarmentType
         }
     }, [placements, printLocations, activeId, setPrintLocations]);
 
-    // Going back and switching to a dark colour lowers the ceiling. Pull any location that
-    // is now over it back down rather than quoting a job the sheet cannot price.
+    // Guard: never carry a location past the ceiling into the quote step.
     useEffect(() => {
         if (printLocations.some((l) => l.colors > maxColors)) {
             setPrintLocations((prev) => prev.map((l) => (l.colors > maxColors ? { ...l, colors: maxColors } : l)));
@@ -265,12 +263,6 @@ export default function PrintLocations({ onNext, onPrevious, selectedGarmentType
                             </div>
                             {PRINTS_PER_PLACEMENT[active.name] > 1 && (
                                 <p className='text-xs bodyColor mt-2'>Sleeves prints both arms, so it prices as two prints.</p>
-                            )}
-                            {dark && (
-                                <p className='text-xs bodyColor mt-2'>
-                                    {selectedColor?.name || 'This color'} is a dark garment, so we lay down a white base first to keep
-                                    your colors bright. That base uses one screen.
-                                </p>
                             )}
                             {active.colors >= maxColors && (
                                 <p className='text-xs bodyColor mt-2'>

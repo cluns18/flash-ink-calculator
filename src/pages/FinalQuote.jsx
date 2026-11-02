@@ -35,14 +35,13 @@ export default function FinalQuote({
     const belowMin = quantity < MIN_QTY;
 
     const quote = useMemo(
-        () => calculateFinalQuote({ selectedGarmentType, selectedGarment, selectedColor, printLocations, quantity }),
-        [selectedGarmentType, selectedGarment, selectedColor, printLocations, quantity]
+        () => calculateFinalQuote({ selectedGarmentType, selectedGarment, printLocations, quantity }),
+        [selectedGarmentType, selectedGarment, printLocations, quantity]
     );
     // Priced by hand: the sheet has no number for this job (7 or 8 screens at 600+, or past
     // the matrix), but the lead is still worth sending.
     const byHand = !belowMin && !quote.ok && (quote.code === 'NO_PRICE_CELL' || quote.code === 'SCREENS_EXCEEDED');
 
-    const dark = selectedColor ? selectedColor.underbase !== 0 : true;
     const garmentLabel = garmentLabelFor({ selectedModel, selectedGarmentType, selectedGarment });
 
     const setSize = (size, raw) => {
@@ -74,11 +73,11 @@ export default function FinalQuote({
     const change = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
     const blur = (e) => setTouched((t) => ({ ...t, [e.target.name]: true }));
 
-    const { sizeLine, inkLine, priceText, totalText } = describeJob({ counts, printLocations, dark, quote });
+    const { sizeLine, inkLine, priceText, totalText } = describeJob({ counts, printLocations, quote });
 
     // Built by the pure module so scripts/lead-contract-test.mjs sends the exact same body.
     const buildPayload = () =>
-        buildQuotePayload({ form, garmentLabel, selectedColor, printLocations, dark, quantity, counts, quote, byHand });
+        buildQuotePayload({ form, garmentLabel, selectedColor, printLocations, quantity, counts, quote, byHand });
 
     const submit = async () => {
         setTouched({ name: true, email: true, phone: true });

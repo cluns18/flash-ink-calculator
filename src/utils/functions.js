@@ -8,13 +8,11 @@ import { priceJob } from '../pricing/flashInk.js';
 // S&S base_cost. Either way the markup comes from the garment TYPE the customer picked, so a
 // catalog hoodie rides SGM and a catalog tee rides BGM, never Local Threads' flat 1.4.
 //
-// Underbase: the colour's `underbase` flag (1 = dark). A colour with no flag prices as dark,
-// which quotes high rather than low.
-const calculateFinalQuote = ({ selectedGarmentType, selectedGarment, selectedColor, printLocations, quantity }) =>
+// Garment colour does not change the price: no underbase screen, as ConvertCalculator priced it.
+const calculateFinalQuote = ({ selectedGarmentType, selectedGarment, printLocations, quantity }) =>
     priceJob({
         garmentTypeId: selectedGarmentType?.id,
         garmentCost: selectedGarment?.cost,
-        darkGarment: selectedColor ? selectedColor.underbase !== 0 : true,
         locations: (printLocations || []).map((l) => ({ name: l.name, colors: l.colors })),
         quantity,
     });

@@ -8,19 +8,16 @@
 //   GCL = (SSG + LSG + SNS) * VLOOKUP(PQ, BGM, 1, 1) + HDG * VLOOKUP(PQ, SGM, 1, 1)
 //   FM  = PPI * PQ
 //
-// Two deliberate departures, both OBG house rules for every rebuild (Brian, 2026-08-12):
+// This matches ConvertCalculator's prices exactly (Brian, 2026-11-02, reversing the
+// per-location and underbase house rules for Flash Ink only). IMP is the total ink colours
+// across every location, sleeves counted twice (the spec's 2 * QAY), and SPM is looked up
+// ONCE on that total. Light or dark garment does not change the price: no underbase screen.
 //
-//   1. The print matrix is looked up ONCE PER PRINT LOCATION and the results are summed.
-//      ConvertCalculator looked it up once on the TOTAL impressions across every location,
-//      so a 3-colour front plus a 3-colour back read the 6-colour column once. Here it reads
-//      the 3-colour column twice. Multi-location quotes land on different numbers from the
-//      old calculator; scripts/price-check.mjs prints how far for the record.
-//   2. A dark garment needs a white underbase, and that base is a real screen at every
-//      location. ConvertCalculator never charged it.
-//
-// Everything else is the spec, to the cent: Dan's SPM matrix, the $25 screen amortized over
-// the run, and the split garment markup he asked for ("Hoodies have a different markup",
-// Dan Wellisch, Nov 2024): tees and long sleeves on BGM, hoodies on SGM.
+// The rest is the spec, to the cent: Dan's SPM matrix, the $25 screen amortized over the
+// run, and the split garment markup he asked for ("Hoodies have a different markup", Dan
+// Wellisch, Nov 2024): tees and long sleeves on BGM, hoodies on SGM. Where ConvertCalculator
+// showed nothing (IMP past 8, an empty cell, under 12 pieces), this returns a code and the
+// quote step offers "we will price it by hand" while the lead still submits.
 //
 // This file is plain ESM with no imports so the price check can run it straight in node.
 
@@ -32,7 +29,7 @@ export const SCREEN_FEE = 25;
 export const MIN_QTY = 12;
 
 // SPM, "Smaller Pricing Matrix". Print cost per piece. Rows are quantity breaks, columns are
-// SCREENS at one print location, 1 through 8. `null` is a cell that is empty in Flash Ink's
+// IMP, the total ink colours across the whole job, 1 through 8. `null` is a cell that is empty in Flash Ink's
 // own sheet.
 //
 // KNOWN DEFECT CARRIED OVER ON PURPOSE, flag to Dan before launch: the 7 and 8 columns for
@@ -55,7 +52,7 @@ export const PRINT_MATRIX = [
     { quantity: 5000, prices: [1.64, 2.15, 2.63, 3.12, 3.61, 4.09, null, null] },
 ];
 
-// Widest screen count the sheet prices at one location.
+// Widest IMP the sheet prices.
 export const MAX_SCREENS = Math.max(...PRINT_MATRIX.map((row) => row.prices.length));
 
 // BGM, garment markup for tees and long sleeves. Note the cliff at 200 (1.70 straight to
@@ -119,11 +116,12 @@ export const rowFor = (table, quantity) => {
     return null;
 };
 
-export const screensFor = (colors, underbase) => colors + (underbase ? 1 : 0);
+// IMP = (2 * (QAY + QAW)) + (QX + QAU + QBG + QBB): every colour at every location, sleeves twice.
+export const impressionsFor = (locations) =>
+    (locations || []).reduce((sum, l) => sum + Math.floor(Number(l.colors)) * (PRINTS_PER_PLACEMENT[l.name] || 1), 0);
 
-// Print cost per piece for one print at one location. null when the sheet cannot price it:
-// past the matrix width, or an empty cell (7 or 8 screens at 600 pieces and up). That is the
-// only gate. Never coerce a null to 0, which is how other calculators handed back cheap quotes.
+// Print cost per piece for the job's IMP. null when the sheet cannot price it: past the
+// matrix width, or an empty cell (7 or 8 at 600 pieces and up). That is the only gate. Never coerce a null to 0, which is how other calculators handed back cheap quotes.
 export const printCost = (screens, quantity) => {
     const row = rowFor(PRINT_MATRIX, quantity);
     if (!row || screens < 1 || screens > row.prices.length) return null;
@@ -145,13 +143,12 @@ const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
  * @param {object} job
  * @param {string} job.garmentTypeId  'tshirts' | 'longsleeves' | 'hoodies'
  * @param {number} job.garmentCost    blank cost before markup (spec cost, or S&S base_cost)
- * @param {boolean} job.darkGarment   true when the colour needs a white underbase
  * @param {Array<{name:string, colors:number}>} job.locations
  * @param {number} job.quantity
  * @returns {{ ok: true, pricePerItem, totalQuote, rawPricePerItem, breakdown }
  *         | { ok: false, code, message, ... }}
  */
-export function priceJob({ garmentTypeId, garmentCost, darkGarment, locations, quantity }) {
+export function priceJob({ garmentTypeId, garmentCost, locations, quantity }) {
     const qty = Math.floor(Number(quantity));
     if (!Number.isFinite(qty) || qty < MIN_QTY) {
         return { ok: false, code: 'BELOW_MINIMUM', minimum: MIN_QTY, message: `Minimum order is ${MIN_QTY} pieces.` };
@@ -166,34 +163,24 @@ export function priceJob({ garmentTypeId, garmentCost, darkGarment, locations, q
         return { ok: false, code: 'INCOMPLETE', message: 'Add at least one print location.' };
     }
 
-    let decoration = 0;
-    let totalScreens = 0;
-    const perLocation = [];
-    for (const loc of spots) {
-        const prints = PRINTS_PER_PLACEMENT[loc.name] || 1;
-        const screens = screensFor(Math.floor(Number(loc.colors)), darkGarment);
-        const each = printCost(screens, qty);
-        if (each === null) {
-            const pastWidth = screens > MAX_SCREENS;
-            return {
-                ok: false,
-                code: pastWidth ? 'SCREENS_EXCEEDED' : 'NO_PRICE_CELL',
-                location: loc.name,
-                screens,
-                maxScreens: MAX_SCREENS,
-                message: pastWidth
-                    ? `${loc.name} needs ${screens} screens. Our instant pricing tops out at ${MAX_SCREENS}.`
-                    : `${screens} screens at ${qty} pieces is not on our instant price sheet.`,
-            };
-        }
-        decoration += each * prints;
-        totalScreens += screens * prints;
-        perLocation.push({ name: loc.name, prints, screens, printCostEach: each });
+    const imp = impressionsFor(spots);
+    const decoration = printCost(imp, qty);
+    if (decoration === null) {
+        const pastWidth = imp > MAX_SCREENS;
+        return {
+            ok: false,
+            code: pastWidth ? 'SCREENS_EXCEEDED' : 'NO_PRICE_CELL',
+            impressions: imp,
+            maxScreens: MAX_SCREENS,
+            message: pastWidth
+                ? `This job has ${imp} ink colors across its prints. Our instant pricing tops out at ${MAX_SCREENS}.`
+                : `${imp} ink colors at ${qty} pieces is not on our instant price sheet.`,
+        };
     }
 
     const garment = cost * markup;
-    const screenFees = (totalScreens * SCREEN_FEE) / qty;
-    const raw = garment + decoration + screenFees;
+    const screenFees = (imp * SCREEN_FEE) / qty;
+    const raw = decoration + garment + screenFees;
 
     return {
         ok: true,
@@ -201,6 +188,6 @@ export function priceJob({ garmentTypeId, garmentCost, darkGarment, locations, q
         pricePerItem: round2(raw),
         // FM = PPI * PQ on the unrounded PPI, as ConvertCalculator computed it.
         totalQuote: round2(raw * qty),
-        breakdown: { garment, markup, decoration, screenFees, totalScreens, perLocation },
+        breakdown: { garment, markup, decoration, screenFees, impressions: imp },
     };
 }

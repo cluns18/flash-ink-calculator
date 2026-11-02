@@ -8,17 +8,13 @@
 // out of src/garments/**. The "calc" side runs src/utils/functions.js, the exact function the
 // FinalQuote step calls, with the same state shape the UI hands it.
 //
-// Reading of the spec used here (OBG house rules, Brian 2026-08-12):
-//   - SPM looked up once PER PRINT LOCATION on that location's screens, results summed.
-//     Sleeves count as two prints (the spec's 2 * QAY).
-//   - Screens = ink colours, plus 1 white underbase on a dark garment, per location.
+// Reading of the spec used here (ConvertCalculator exactly, Brian 2026-11-02):
+//   - IMP = total ink colours across every location, sleeves counted twice (the spec's 2 * QAY).
+//   - SPM looked up ONCE on IMP. No underbase screen; light and dark price the same.
 //   - VLOOKUP(..., TRUE): last row whose quantity is <= the order quantity.
-//   - An empty SPM cell means no price (ConvertCalculator returned nothing there).
-//   - Garment = cost * BGM (tees, long sleeves) or SGM (hoodies). $25 a screen / quantity.
+//   - An empty SPM cell or IMP past 8 means no price (the calc offers a hand price instead).
+//   - Garment = cost * BGM (tees, long sleeves) or SGM (hoodies). $25 a screen (IMP) / quantity.
 //   - Total = unrounded PPI * quantity, then rounded to cents, as FM = PPI * PQ.
-//
-// It also prints ConvertCalculator's own single-lookup total for the multi-location cases,
-// so the difference the per-location rule makes is on the record.
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -96,30 +92,15 @@ console.log(failures ? '' : '  all 12 match\n');
 // ---------- independent spec reading ----------
 const vlookup = (table, q) => { let hit = null; for (const r of table) if (r.quantity <= q) hit = r; return hit; };
 const PRINTS = { Sleeves: 2 };
-const specPerLocation = ({ garment, dark, locations, qty }) => {
-    const [, , type] = GARMENTS[garment];
-    const cost = specCost(GARMENTS[garment][1]);
-    const markup = vlookup(type === 'hoodies' ? SGM : BGM, qty).markup;
-    const row = vlookup(SPM, qty);
-    let deco = 0, screens = 0;
-    for (const l of locations) {
-        const s = l.colors + (dark ? 1 : 0);
-        const cell = row.prices[s - 1];
-        if (cell === null || cell === undefined) return null;
-        const n = PRINTS[l.name] || 1;
-        deco += cell * n;
-        screens += s * n;
-    }
-    const ppi = cost * markup + deco + (screens * 25) / qty;
-    return { ppi: Math.round(ppi * 100) / 100, total: Math.round(ppi * qty * 100) / 100 };
-};
-// ConvertCalculator as it runs today: ONE lookup on IMP = total colours (sleeves doubled),
-// no underbase. IMP past 8 or an empty cell shows the customer "...".
+// ConvertCalculator exactly: PPI = VLOOKUP(PQ, SPM, IMP, TRUE) + GCL + (IMP * 25) / PQ, with
+// IMP = every colour at every location, sleeves twice, and ONE lookup. No underbase, so the
+// garment shade is not an input. An IMP past 8, an empty cell or under 12 pieces is no price.
 const specSingleLookup = ({ garment, locations, qty }) => {
     const [, label, type] = GARMENTS[garment];
+    if (qty < 12) return null;
     const imp = locations.reduce((s, l) => s + l.colors * (PRINTS[l.name] || 1), 0);
     const cell = vlookup(SPM, qty).prices[imp - 1];
-    if (cell === null || cell === undefined) return null;
+    if (cell === null || cell === undefined) return { none: true, imp };
     const ppi = cell + specCost(label) * vlookup(type === 'hoodies' ? SGM : BGM, qty).markup + (imp * 25) / qty;
     return { ppi: Math.round(ppi * 100) / 100, total: Math.round(ppi * qty * 100) / 100, imp };
 };
@@ -136,36 +117,41 @@ const calc = ({ garment, dark, locations, qty }) => {
     });
 };
 
+// expectTotal pins a number ConvertCalculator itself was read to give.
 const CASES = [
+    { garment: 'NL3600', dark: true, qty: 24, locations: [{ name: 'Front Chest', colors: 2 }, { name: 'Full Back', colors: 1 }], expectTotal: 456.36 },
+    { garment: 'NL3600', dark: false, qty: 24, locations: [{ name: 'Front Chest', colors: 2 }, { name: 'Full Back', colors: 1 }], expectTotal: 456.36 },
     { garment: 'G5000', dark: false, qty: 12, locations: [{ name: 'Front Chest', colors: 1 }] },
-    { garment: 'NL3600', dark: true, qty: 24, locations: [{ name: 'Front Chest', colors: 2 }, { name: 'Full Back', colors: 1 }] },
+    { garment: 'NL3600', dark: true, qty: 48, locations: [{ name: 'Front Chest', colors: 2 }, { name: 'Full Back', colors: 1 }] },
     { garment: 'G18500', dark: false, qty: 48, locations: [{ name: 'Full Front', colors: 3 }] },
     { garment: 'BC3501', dark: true, qty: 72, locations: [{ name: 'Front Chest', colors: 1 }, { name: 'Sleeves', colors: 1 }] },
     { garment: 'IND4000', dark: true, qty: 144, locations: [{ name: 'Full Front', colors: 6 }] },
     { garment: 'BC3001', dark: false, qty: 144, locations: [{ name: 'Full Front', colors: 8 }] },
     { garment: 'G5000', dark: false, qty: 199, locations: [{ name: 'Full Front', colors: 1 }] },
     { garment: 'G5000', dark: false, qty: 200, locations: [{ name: 'Full Front', colors: 1 }] },
-    { garment: 'G6440', dark: false, qty: 400, locations: [{ name: 'Full Front', colors: 7 }] },
+    { garment: 'G6440', dark: true, qty: 400, locations: [{ name: 'Full Front', colors: 4 }, { name: 'Full Back', colors: 2 }, { name: 'Sleeves', colors: 1 }] },
     { garment: 'JHA001', dark: false, qty: 600, locations: [{ name: 'Full Front', colors: 4 }, { name: 'Full Back', colors: 2 }] },
     { garment: 'CC1717', dark: false, qty: 600, locations: [{ name: 'Full Front', colors: 7 }] },
-    { garment: 'CC6014', dark: true, qty: 600, locations: [{ name: 'Full Front', colors: 6 }] },
+    { garment: 'CC6014', dark: true, qty: 600, locations: [{ name: 'Full Front', colors: 4 }, { name: 'Full Back', colors: 3 }] },
     { garment: 'G18500', dark: false, qty: 1000, locations: [{ name: 'Front Chest', colors: 1 }] },
-    { garment: 'G5000', dark: false, qty: 2000, locations: [{ name: 'Full Front', colors: 2 }, { name: 'Full Back', colors: 1 }] },
+    { garment: 'G5000', dark: true, qty: 2000, locations: [{ name: 'Full Front', colors: 2 }, { name: 'Full Back', colors: 1 }] },
     { garment: 'NL6210', dark: false, qty: 2000, locations: [{ name: 'Full Front', colors: 8 }] },
-    { garment: 'IND4000', dark: true, qty: 48, locations: [{ name: 'Full Front', colors: 8 }] },
+    { garment: 'IND4000', dark: true, qty: 48, locations: [{ name: 'Full Front', colors: 6 }, { name: 'Full Back', colors: 3 }] },
+    { garment: 'NL6211', dark: true, qty: 72, locations: [{ name: 'Full Front', colors: 4 }, { name: 'Sleeves', colors: 3 }] },
 ];
 
 const money = (n) => (n === null || n === undefined ? '-' : '$' + n.toFixed(2));
 const desc = (c) => `${c.qty} ${c.garment} ${c.dark ? 'dark' : 'light'}, ${c.locations.map((l) => `${l.name} ${l.colors}c`).join(' + ')}`;
+const BY_HAND = ['NO_PRICE_CELL', 'SCREENS_EXCEEDED'];
 
-console.log('Case | spec PPI | calc PPI | spec total | calc total | result');
+console.log('Case | IMP | spec PPI | calc PPI | spec total | calc total | result');
 for (const c of CASES) {
-    const s = specPerLocation(c);
+    const s = specSingleLookup(c);
     const q = calc(c);
     let result;
-    if (s === null) {
-        result = q.ok ? `MISMATCH (calc priced it, spec has no cell)` : `both withheld (${q.code})`;
-        if (q.ok) fail(desc(c));
+    if (s.none) {
+        result = !q.ok && BY_HAND.includes(q.code) ? `both no price, calc offers by hand (${q.code})` : 'MISMATCH (spec has no price)';
+        if (q.ok || !BY_HAND.includes(q.code)) fail(desc(c));
     } else if (!q.ok) {
         result = `MISMATCH (calc withheld: ${q.code})`;
         fail(desc(c));
@@ -174,27 +160,24 @@ for (const c of CASES) {
         result = same ? 'match' : 'MISMATCH';
         if (!same) fail(desc(c));
     }
-    console.log(`${desc(c)} | ${money(s?.ppi)} | ${q.ok ? money(q.pricePerItem) : '-'} | ${money(s?.total)} | ${q.ok ? money(q.totalQuote) : '-'} | ${result}`);
+    if (c.expectTotal !== undefined && (!q.ok || q.totalQuote !== c.expectTotal || s.total !== c.expectTotal)) {
+        fail(`${desc(c)}: expected ConvertCalculator's ${money(c.expectTotal)}`);
+        result += ` (expected ${money(c.expectTotal)})`;
+    }
+    console.log(`${desc(c)} | ${s.imp} | ${money(s.ppi)} | ${q.ok ? money(q.pricePerItem) : '-'} | ${money(s.total)} | ${q.ok ? money(q.totalQuote) : '-'} | ${result}`);
 }
 
-console.log('\nMulti-location and sleeve jobs: ConvertCalculator today vs this calc, split by cause');
-console.log('  CC today        = one lookup on total colours (IMP), no underbase. What flashink.com quotes now.');
-console.log('  per-location    = this calc with the underbase switched off, so only the lookup rule differs.');
-console.log('  this calc       = per-location lookup + underbase screen on dark garments.');
-console.log('Case | CC today | per-location | this calc | change vs CC today');
-for (const c of CASES.filter((x) => x.locations.length > 1 || x.locations.some((l) => PRINTS[l.name]))) {
-    const cc = specSingleLookup(c);
-    const lightOnly = calc({ ...c, dark: false });
-    const q = calc(c);
-    const diff = cc && q.ok ? q.totalQuote - cc.total : null;
-    console.log(`${desc(c)} | ${cc ? money(cc.total) + ` (IMP ${cc.imp})` : 'shows "..."'} | ${lightOnly.ok ? money(lightOnly.totalQuote) : lightOnly.code} | ${q.ok ? money(q.totalQuote) : q.code} | ${diff === null ? '-' : (diff >= 0 ? '+' : '-') + money(Math.abs(diff)) + ` (${((diff / cc.total) * 100).toFixed(1)}%)`}`);
+// Shade never moves the price.
+for (const c of CASES) {
+    const a = calc({ ...c, dark: true }), b = calc({ ...c, dark: false });
+    if (a.ok !== b.ok || a.totalQuote !== b.totalQuote) fail(`${desc(c)}: dark and light price differently`);
 }
 
 // Below-minimum and empty-job guards.
-const below = calc({ ...CASES[0], qty: 11 });
+const below = calc({ ...CASES[2], qty: 11 });
 if (below.ok || below.code !== 'BELOW_MINIMUM') fail('qty 11 should be BELOW_MINIMUM');
-const none = calculateFinalQuote({ selectedGarmentType: { id: 'tshirts' }, selectedGarment: { cost: 2.52 }, selectedColor: { underbase: 0 }, printLocations: [], quantity: 50 });
+const none = calculateFinalQuote({ selectedGarmentType: { id: 'tshirts' }, selectedGarment: { cost: 2.52 }, printLocations: [], quantity: 50 });
 if (none.ok) fail('no locations should not price');
 
-console.log(failures ? `\n${failures} FAILURE(S)` : '\nAll cases match to the cent.');
+console.log(failures ? `\n${failures} FAILURE(S)` : `\nAll ${CASES.length} cases match ConvertCalculator to the cent.`);
 process.exit(failures ? 1 : 0);

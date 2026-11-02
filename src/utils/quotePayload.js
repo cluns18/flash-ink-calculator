@@ -21,12 +21,14 @@ export const garmentLabelFor = ({ selectedModel, selectedGarmentType, selectedGa
 };
 
 // The human lines shared by the payload, the mailto fallback and the analytics event.
-export const describeJob = ({ counts, printLocations, dark, quote }) => {
+// No underbase or white base anywhere: the price does not include one (ConvertCalculator
+// parity, 2026-11-02), so the shop email must not suggest a charge the customer never saw.
+export const describeJob = ({ counts, printLocations, quote }) => {
     const sizeLine = GARMENT_SIZES.filter((s) => counts[s] > 0).map((s) => `${s} x ${counts[s]}`).join(' · ');
     const inkLine = (printLocations || [])
         .map((l) => {
             const both = (PRINTS_PER_PLACEMENT[l.name] || 1) > 1 ? ', both sleeves' : '';
-            return `${l.name}: ${l.colors} color${l.colors === 1 ? '' : 's'}${dark ? ' + white base' : ''}${both}`;
+            return `${l.name}: ${l.colors} color${l.colors === 1 ? '' : 's'}${both}`;
         })
         .join(', ');
     const priceText = quote.ok ? quote.pricePerItem.toFixed(2) : 'Priced by hand';
@@ -40,8 +42,8 @@ export const describeJob = ({ counts, printLocations, dark, quote }) => {
  * @returns {{ payload: object, file: File|null, artworkUrl: string|null }}
  *          exactly what FinalQuote hands to sendQuote(payload, { file, artworkUrl }).
  */
-export const buildQuotePayload = ({ form, garmentLabel, selectedColor, printLocations, dark, quantity, counts, quote, byHand }) => {
-    const { sizeLine, inkLine, priceText, totalText } = describeJob({ counts, printLocations, dark, quote });
+export const buildQuotePayload = ({ form, garmentLabel, selectedColor, printLocations, quantity, counts, quote, byHand }) => {
+    const { sizeLine, inkLine, priceText, totalText } = describeJob({ counts, printLocations, quote });
     const locs = printLocations || [];
     const uploaded = locs.find((l) => l.artwork && !l.artwork.startsWith('pending:'));
     const pending = locs.find((l) => l.artwork && l.artwork.startsWith('pending:'));
@@ -75,7 +77,7 @@ export const buildQuotePayload = ({ form, garmentLabel, selectedColor, printLoca
                 color: text(selectedColor?.name || '', 80),
                 locations: locs.map((l) => l.name).join(', ') || 'None',
                 ink_details: inkLine || 'Standard',
-                special_inks: dark ? 'White underbase (dark garment)' : 'None',
+                special_inks: 'None',
                 size_breakdown: sizeLine || 'N/A',
                 quantity,
                 price_per_item: priceText,

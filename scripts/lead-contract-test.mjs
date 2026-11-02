@@ -92,12 +92,11 @@ try {
   };
 
   // ---- the same derivations FinalQuote makes, then the shipped price and payload
-  const quote = calculateFinalQuote({ selectedGarmentType, selectedGarment, selectedColor, printLocations, quantity });
+  const quote = calculateFinalQuote({ selectedGarmentType, selectedGarment, printLocations, quantity });
   const belowMin = quantity < MIN_QTY;
   const byHand = !belowMin && !quote.ok && (quote.code === 'NO_PRICE_CELL' || quote.code === 'SCREENS_EXCEEDED');
-  const dark = selectedColor ? selectedColor.underbase !== 0 : true;
   const garmentLabel = garmentLabelFor({ selectedModel, selectedGarmentType, selectedGarment });
-  const built = buildQuotePayload({ form, garmentLabel, selectedColor, printLocations, dark, quantity, counts, quote, byHand });
+  const built = buildQuotePayload({ form, garmentLabel, selectedColor, printLocations, quantity, counts, quote, byHand });
   const { payload } = built;
 
   // ---- run it through the shipped sendQuote, with fetch captured (and stubbed in dry run)
@@ -142,6 +141,8 @@ try {
   }
   if (q.quantity !== 48) problems.push(`quantity is ${q.quantity}`);
   if (!/^\d+\.\d{2}$/.test(q.price_per_item) || !/^\d+\.\d{2}$/.test(q.total_price)) problems.push('price fields are not numbers');
+  // ConvertCalculator parity: the price carries no underbase, so the shop email must not either.
+  if (/white base|underbase/i.test(JSON.stringify(payload))) problems.push('payload mentions a white base / underbase the price does not include');
   if (!/^Uploaded: https?:\/\//.test(q.artwork_status)) problems.push(`artwork_status is "${q.artwork_status}"`);
   if (sendErr) problems.push(`sendQuote threw: ${sendErr.message}${sendErr.status ? ` (HTTP ${sendErr.status})` : ''}`);
 
