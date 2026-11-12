@@ -72,6 +72,11 @@
 
 .is-embedded .slide-page {
   max-height: none;
+  /* The phone and tablet rules below set the card's height in vh. Inside a frame
+     vh is the frame's own height, so the card would report exactly what the
+     parent gave it and never fit its content (720px on every phone, and a 16px
+     creep loop on a 600px wide frame). Content height only, when embedded. */
+  height: auto;
 }
 
 .slide-page {
